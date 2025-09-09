@@ -4,13 +4,20 @@ import argparse
 import os
 import torch
 from openvoice.api import BaseSpeakerTTS, ToneColorConverter
-from openvoice.se_extractor import get_se_from_audio
+import torchaudio
+
+def extract_se(audio_path: str, converter: ToneColorConverter, device: str):
+    wav, sr = torchaudio.load(audio_path)
+    wav = wav.mean(dim=0, keepdim=True)  # make mono
+    wav = torchaudio.functional.resample(wav, orig_freq=sr, new_freq=16000)
+    se = converter.get_se(wav.to(device))
+    return se
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--text", required=True, help="Text to synthesize")
-    parser.add_argument("--ref_audio", required=True, help="Path to reference .wav file")
-    parser.add_argument("--output_dir", required=True, help="Directory to save result")
+    parser.add_argument("--text", required=True)
+    parser.add_argument("--ref_audio", required=True)
+    parser.add_argument("--output_dir", required=True)
     args = parser.parse_args()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -19,20 +26,20 @@ def main():
     ckpt_base = 'checkpoints/base_speakers/EN'
     ckpt_converter = 'checkpoints/converter'
 
-    # Load models
+    print("🧠 Loading models...")
     base_speaker_tts = BaseSpeakerTTS(f'{ckpt_base}/config.json', device=device)
     base_speaker_tts.load_ckpt(f'{ckpt_base}/checkpoint.pth')
 
     tone_converter = ToneColorConverter(f'{ckpt_converter}/config.json', device=device)
     tone_converter.load_ckpt(f'{ckpt_converter}/checkpoint.pth')
 
-    # Extract speaker embedding from your reference audio
-    source_se = get_se_from_audio(args.ref_audio, tone_converter, device)
+    print("🧬 Extracting speaker embedding...")
+    source_se = extract_se(args.ref_audio, tone_converter, device)
 
-    # Inference
-    print("🧠 Synthesizing speech...")
+    print("🗣️ Synthesizing voice...")
     save_path = os.path.join(args.output_dir, "ai_voice.wav")
     base_speaker_tts.tts(args.text, source_se, save_path)
+
     print(f"✅ Voice clone saved at: {save_path}")
 
 if __name__ == "__main__":
