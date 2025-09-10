@@ -43,7 +43,8 @@ def main():
     final_audio_path = os.path.join(args.output_dir, "ai_voice.wav")
 
     # You can optionally use a pre-computed default speaker embedding here:
-    source_se = tone_color_converter.extract_se(args.ref_audio)  # or make a short neutral base voice
+    #source_se = tone_color_converter.extract_se(args.ref_audio)  # or make a short neutral base voice
+    source_se = torch.load('checkpoints/base_speakers/EN/en_default_se.pth').to(device)
 
     tone_color_converter.convert(
         audio_src_path=neutral_audio_path,
