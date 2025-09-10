@@ -1,4 +1,4 @@
-# cli_runner.py (verified against latest OpenVoice)
+# cli_runner.py — the RIGHT way using extract_se()
 
 import argparse
 import os
@@ -19,16 +19,16 @@ def main():
     ckpt_converter = 'checkpoints/converter'
 
     print("🧠 Loading models...")
-    base_speaker_tts = BaseSpeakerTTS(f'{ckpt_base}/config.json', device=device)
-    base_speaker_tts.load_ckpt(f'{ckpt_base}/checkpoint.pth')
+    base_speaker_tts = BaseSpeakerTTS(f"{ckpt_base}/config.json", device=device)
+    base_speaker_tts.load_ckpt(f"{ckpt_base}/checkpoint.pth")
 
-    tone_converter = ToneColorConverter(f'{ckpt_converter}/config.json', device=device)
-    tone_converter.load_ckpt(f'{ckpt_converter}/checkpoint.pth')
+    tone_converter = ToneColorConverter(f"{ckpt_converter}/config.json", device=device)
+    tone_converter.load_ckpt(f"{ckpt_converter}/checkpoint.pth")
 
-    print("🧬 Extracting speaker style vector...")
-    style_vector = tone_converter.get_style_vector(args.ref_audio)
+    print("🧬 Extracting speaker embedding from your voice...")
+    style_vector = tone_converter.extract_se(args.ref_audio)
 
-    print("🗣️ Synthesizing speech...")
+    print("🗣️ Synthesizing speech using cloned voice...")
     output_path = os.path.join(args.output_dir, "ai_voice.wav")
     base_speaker_tts.tts(args.text, style_vector, output_path)
 
