@@ -1,9 +1,8 @@
-# cli_runner.py (v2 - compatible with latest OpenVoice)
+# cli_runner.py (verified against latest OpenVoice)
 
 import argparse
 import os
 import torch
-import torchaudio
 from openvoice.api import BaseSpeakerTTS, ToneColorConverter
 
 def main():
@@ -26,21 +25,12 @@ def main():
     tone_converter = ToneColorConverter(f'{ckpt_converter}/config.json', device=device)
     tone_converter.load_ckpt(f'{ckpt_converter}/checkpoint.pth')
 
-    print("🧬 Extracting speaker embedding (using convert_audio_to_embed)...")
+    print("🧬 Extracting speaker style vector...")
+    style_vector = tone_converter.get_style_vector(args.ref_audio)
 
-    # Load and preprocess audio
-    wav, sr = torchaudio.load(args.ref_audio)
-    wav = wav.mean(dim=0, keepdim=True)  # ensure mono
-    wav = torchaudio.functional.resample(wav, orig_freq=sr, new_freq=16000)
-    wav = wav.to(device)
-
-    # Convert to speaker embedding
-    speaker_embed = tone_converter.convert_audio_to_embed(wav)
-
-    # Generate speech
     print("🗣️ Synthesizing speech...")
     output_path = os.path.join(args.output_dir, "ai_voice.wav")
-    base_speaker_tts.tts(args.text, speaker_embed, output_path)
+    base_speaker_tts.tts(args.text, style_vector, output_path)
 
     print(f"✅ Voice clone saved at: {output_path}")
 
