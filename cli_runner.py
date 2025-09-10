@@ -1,9 +1,8 @@
-# cli_runner.py — the RIGHT way using extract_se()
-
 import argparse
 import os
 import torch
 from openvoice.api import BaseSpeakerTTS, ToneColorConverter
+from openvoice import se_extractor
 
 def main():
     parser = argparse.ArgumentParser()
@@ -22,24 +21,39 @@ def main():
     base_speaker_tts = BaseSpeakerTTS(f"{ckpt_base}/config.json", device=device)
     base_speaker_tts.load_ckpt(f"{ckpt_base}/checkpoint.pth")
 
-    tone_converter = ToneColorConverter(f"{ckpt_converter}/config.json", device=device)
-    tone_converter.load_ckpt(f"{ckpt_converter}/checkpoint.pth")
+    tone_color_converter = ToneColorConverter(f"{ckpt_converter}/config.json", device=device)
+    tone_color_converter.load_ckpt(f"{ckpt_converter}/checkpoint.pth")
 
-    print("🧬 Extracting speaker embedding from your voice...")
-    style_vector = tone_converter.extract_se(args.ref_audio)
-
-    print("🗣️ Synthesizing speech using cloned voice...")
-    output_path = os.path.join(args.output_dir, "ai_voice.wav")
-
-    base_speaker_tts.tts(
-        text=args.text,
-        speaker="default",
-        output_path=output_path,
-        style_vector=style_vector,
-        language="en"
+    print("🧬 Extracting target speaker embedding...")
+    tgt_se, _ = se_extractor.get_se(
+        args.ref_audio, tone_color_converter, target_dir='processed', vad=True
     )
 
-    print(f"✅ Voice clone saved at: {output_path}")
+    print("🗣️ Generating neutral speech...")
+    neutral_audio_path = os.path.join(args.output_dir, "tmp.wav")
+    base_speaker_tts.tts(
+        text=args.text,
+        speaker='default',
+        output_path=neutral_audio_path,
+        language='English',
+        speed=1.0
+    )
+
+    print("🎭 Applying tone conversion (cloning)...")
+    final_audio_path = os.path.join(args.output_dir, "ai_voice.wav")
+
+    # You can optionally use a pre-computed default speaker embedding here:
+    source_se = tone_color_converter.extract_se('assets/default.wav')  # or make a short neutral base voice
+
+    tone_color_converter.convert(
+        audio_src_path=neutral_audio_path,
+        src_se=source_se,
+        tgt_se=tgt_se,
+        output_path=final_audio_path,
+        message="@DigitalSelf"
+    )
+
+    print(f"✅ Final voice clone saved at: {final_audio_path}")
 
 if __name__ == "__main__":
     main()
