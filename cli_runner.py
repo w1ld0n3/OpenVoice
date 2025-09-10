@@ -30,7 +30,14 @@ def main():
 
     print("🗣️ Synthesizing speech using cloned voice...")
     output_path = os.path.join(args.output_dir, "ai_voice.wav")
-    base_speaker_tts.tts(args.text, style_vector, output_path)
+
+    base_speaker_tts.tts(
+        text=args.text,
+        speaker="default",
+        output_path=output_path,
+        style_vector=style_vector,
+        language="en"
+    )
 
     print(f"✅ Voice clone saved at: {output_path}")
 
